@@ -422,7 +422,7 @@ bool miller_rabin(bigint N){
 		if (u==one) prob_prime = true;
 		if (u==N-one) prob_prime = true;
 		for (int j=0; j < s-1; j++){
-		 	u = powermod(u, two, N);
+		 	u = u*u % N;
 		 	if (print) {
 		 		printf("u^2 mod N = ");
 		 		writeln(u);
@@ -440,19 +440,43 @@ bool miller_rabin(bigint N){
  */
 pair<bigint, bigint> pollard_rho(bigint N, bigint param){
     bigint x = two;
+    bigint saved_x = two;
     bigint temp = zero;
     bigint y = two;
+    bigint saved_y = two;
+    bigint r = one;
     bigint d = one;
     int e = 0;
     while (d == one){
-        x = (power(x, two) + param) % N;
-        temp = (power(y, two) + param) % N;
-        y = (power(temp, two) + param) % N;
-        if (x > y) d = gcd(x-y, N);
-        else d = gcd(y-x, N);
+        x = (x*x + param) % N;
+        temp = (y*y + param) % N;
+        y = (temp*temp + param) % N;
+        if (x > y) r = (r*(x-y)) % N;
+        else r = (r*(y-x)) % N;
+        if (e % 100 == 0){
+        	d = gcd(r, N);
+        	if (d == one){
+        		saved_x = x;
+        		saved_y = y;
+        	}
+        }
         e++;
     }
-    if (d == N) return pollard_rho(N, param + one);
+    if (d == N){
+    	// Try classic Pollard rho
+    	x = saved_x;
+    	y = saved_y;
+    	d = one;
+    	while (d == one){
+			x = (x*x + param) % N;
+			temp = (y*y + param) % N;
+			y = (temp*temp + param) % N;
+			if (x > y) d = gcd(x-y, N);
+        	else d = gcd(y-x, N);
+		}
+		// Try with another param
+    	if (d == N) return pollard_rho(N, param + one);
+    }
     return make_pair(d, N/d);
 }
 
