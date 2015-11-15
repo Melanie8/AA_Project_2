@@ -535,7 +535,6 @@ int main(int argc, char *argv[]){
 
 		bigint current = v[0];
 		int exp = 1;
-		bool newfact = false;
 		for (int i = 1; i < v.size(); i++){
 			if (v[i]==current) exp++;
 			else{
