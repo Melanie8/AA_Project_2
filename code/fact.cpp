@@ -22,7 +22,7 @@ bool print = false;
 bool print_time = true;
 
 long long int MOD = 100000000;
-int L = 8;
+int L = 5;
 
 
 /*
@@ -39,7 +39,7 @@ long timediff(clock_t t1, clock_t t2){
  * Big integers
  */
 typedef struct bigint{
-	long long int d[8];
+	long long int d[5];
 
 	bigint& operator =(const bigint& a){
 		for(int i = 0; i < L; i++) d[i] = a.d[i];
@@ -283,9 +283,8 @@ void random_bigint(bigint* x, bigint N){
 
 bigint gcd(bigint a, bigint b){
 	while (!(b==zero)){
-		bigint d = a/b;
 		bigint tmp = b;
-		b = a-b*d;
+		b = a % b;
 		a = tmp;
 	}
 	return a;
@@ -363,46 +362,76 @@ pair<bigint, bigint> pollard_rho(bigint N, bigint param){
     return make_pair(d, N/d);
 }
 
-int main(int argc, char *argv[]){
-    /*srand(time(NULL));*/
+vector<bigint> factorize(bigint N){
+	vector<bigint> factors;
+	vector<bigint> tofactor;
+	while (even(N)){
+		N = N/two;
+		factors.push_back(two);
+	}
+	if (print){
+		printf("N without all the factors 2 = ");
+		writeln(N);
+	}
+	if (miller_rabin(N)) factors.push_back(N);
+	else {
+		tofactor.push_back(N);
+		while(!tofactor.empty()){
+			vector<bigint> newtofactor;
+			for(int i = 0; i < tofactor.size(); i++){
+				if (print){
+					printf("To factor : %d/%lu", i, tofactor.size());
+					writeln(tofactor[i]);
+				}
+				pair<bigint, bigint> p = pollard_rho(tofactor[i], one);
+				if (miller_rabin(p.first)) factors.push_back(p.first);
+				else newtofactor.push_back(p.first);
+				if (miller_rabin(p.second)) factors.push_back(p.second);
+				else newtofactor.push_back(p.second);
+			}
+			tofactor = newtofactor;
+		}
+	}
+	sort(factors.begin(), factors.end());
+	/*printf("All the factors \n");
+	for (int i = 0; i < factors.size(); i++){
+		writeln(factors[i]);
+	}*/
+	return factors;
+}
 
+int main(int argc, char *argv[]){
     initialize(); // DO NOT REMOVE!
-	/* What you can do :
-	zero, one and two are bigints whose values are 0, 1 and 2
-	read(&x) --> read a bigint from stdin and put it in x
-	write(x) --> write x
-	writeln(x) --> write x with \n at the end
-	x = y --> set x equal to y
-	test if x == y
-	test if x <= y
-	test if x >= y
-	test if x < y
-	test if x > y
-	x + y
-	x * y --> be sure you the result is not >= 10^64
-	x - y --> be sure that x >= y
-	x / y --> be sure that y != 0
-	x % y --> be sure that y != 0
-	even(x) --> says if x is even, (really) quicker than x % two == one
-	powermod(x, n, mod) --> compute x^n % mod
-	power(x, n) --> compute x^n IF < 10^64 : should not be useful, prefer powermod
-	*/
 
 	bigint x;
 	read(&x);
-	writeln(x);
-	printf("x prime : %s\n", miller_rabin(x) ? "true" : "false");
+	while (!(x==zero)){
+		//clock_t start = clock();
+		vector<bigint> v = factorize(x);
+		/*if (print_time) {
+			clock_t end = clock();
+			long elapsed = timediff(start, end);
+			printf("Took %ld microseconds\n", elapsed);
+		}*/
 
-	clock_t start = clock();
-	pair<bigint, bigint> p = pollard_rho(x, one);
-	if (print_time) {
-		clock_t end = clock();
-		long elapsed = timediff(start, end);
-		printf("Took %ld microseconds\n", elapsed);
+		bigint current = v[0];
+		int exp = 1;
+		bool newfact = false;
+		for (int i = 1; i < v.size(); i++){
+			if (v[i]==current) exp++;
+			else{
+				write(current);
+				printf("^%d ", exp);
+				current = v[i];
+				exp = 1;
+			}
+			if (i == v.size()-1){
+				write(current);
+				printf("^%d\n", exp);
+			}
+		}
+		read(&x);
 	}
-
-	writeln(p.first);
-	writeln(p.second);
 
     return EXIT_SUCCESS;
 }
