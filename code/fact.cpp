@@ -347,15 +347,21 @@ bool miller_rabin(bigint N){
 /*
  * Factorisation
  */
-/*mpz_t pollard_rho(mpz_t N){
-    vector<mpz_t> x;
-    x.push_back[2];
-    int i = 0;
-    while (true){
-        x.push_back(x[i]*x[i])
-        i++;
+pair<bigint, bigint> pollard_rho(bigint N, bigint param){
+    bigint x = two;
+    bigint temp = zero;
+    bigint y = two;
+    bigint d = one;
+    while (d == one){
+        x = (power(x, two) + param) % N;
+        temp = (power(y, two) + param) % N;
+        y = (power(temp, two) + param) % N;
+        if (x > y) d = gcd(x-y, N);
+        else d = gcd(y-x, N);
     }
-}*/
+    if (d == N) return pollard_rho(N, param + one);
+    return make_pair(d, N/d);
+}
 
 int main(int argc, char *argv[]){
     /*srand(time(NULL));*/
@@ -382,35 +388,21 @@ int main(int argc, char *argv[]){
 	power(x, n) --> compute x^n IF < 10^64 : should not be useful, prefer powermod
 	*/
 
-	bigint x, y;
+	bigint x;
 	read(&x);
-	read(&y);
-	writeln(x);
-	writeln(y);
-	writeln(x+y);
-	writeln(x-y);
-	writeln(x*y);
-	writeln(x/y);
-	writeln(x%y);
-	writeln(power(y, x-one));
-	writeln(powermod(y, x-one, x));
-	writeln(gcd(x,y));
 	writeln(x);
 	printf("x prime : %s\n", miller_rabin(x) ? "true" : "false");
-	writeln(y);
-	printf("y prime : %s\n", miller_rabin(y) ? "true" : "false");
 
 	clock_t start = clock();
-	bigint z = one;
-	for (int i=0; i < 100; i++){
-		if (miller_rabin(z)) writeln(z);
-		z = z + one;
-	}
+	pair<bigint, bigint> p = pollard_rho(x, one);
 	if (print_time) {
 		clock_t end = clock();
 		long elapsed = timediff(start, end);
-		printf("Computing the prime number between 1 and 100 took %ld microseconds\n", elapsed);
+		printf("Took %ld microseconds\n", elapsed);
 	}
+
+	writeln(p.first);
+	writeln(p.second);
 
     return EXIT_SUCCESS;
 }
