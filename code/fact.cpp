@@ -15,13 +15,14 @@
 #include <stdbool.h>
 #include <string.h>
 #include<iostream>
-#include <gmp.h>
+
 using namespace std;
 
 bool print = false;
 bool print_time = true;
 
-long long int MOD = 100000000;
+int MOD = 134217728; // 2^27
+int MOD2 = MOD/2;
 int L = 5;
 
 
@@ -39,7 +40,7 @@ long timediff(clock_t t1, clock_t t2){
  * Big integers
  */
 typedef struct bigint{
-	long long int d[5];
+	int d[5];
 
 	bigint& operator =(const bigint& a){
 		for(int i = 0; i < L; i++) d[i] = a.d[i];
@@ -47,52 +48,18 @@ typedef struct bigint{
 	}
 } bigint;
 
-bigint zero, one, two;
-bigint power10[63];
-
-void read(bigint* x){
-	string s;
-	*x = zero;
-	cin >> s;
-	int where = 0;
-	int pow10 = 1;
-	for(int i = 0; i < s.size(); i++){
-		int digit = s[s.size()-1-i] - '0';
-		x->d[where] += pow10 * digit;
-		if(i % 8 == 7){
-			where++;
-			pow10 = 1;
-		}
-		else pow10 *= 10;
-	}
-}
-
-void write(const bigint x){
-	bool leadingzeros = false;
-	for(int i = L-1; i >= 0; i--){
-		if(leadingzeros) printf("%08d", (int)x.d[i]);
-		else if(x.d[i] != 0 || i == 0){
-			printf("%d", (int)x.d[i]);
-			leadingzeros = true;
-		}
-	}
-}
-
-void writeln(const bigint x){
-	write(x);
-	printf("\n");
-}
+bigint zero, one, two, ten;
 
 int size(const bigint x){
 	for(int i = L-1; i >= 0; i--){
 		if(x.d[i] != 0){
 			int res = 0;
-			int pow10 = 1;
-			while(x.d[i] >= pow10){
-				pow10 *= 10;
+			int pow2 = 1;
+			while(x.d[i] >= pow2){
+				pow2 <<= 1;
 				res++;
 			}
-			return res + 8*i;
+			return res + 27*i;
 		}
 	}
 	return 0;
@@ -132,11 +99,11 @@ bool operator>=(const bigint x, const bigint y){
 
 bigint operator+(const bigint x, const bigint y){
 	bigint z;
-	long long int rest = 0;
+	int rest = 0;
 	for(int i = 0; i < L; i++){
 		z.d[i] = rest + x.d[i] + y.d[i];
 		rest = 0;
-		while(z.d[i] > MOD){
+		while(z.d[i] >= MOD){
 			z.d[i] -= MOD;
 			rest++;
 		}
@@ -147,7 +114,7 @@ bigint operator+(const bigint x, const bigint y){
 bigint operator-(const bigint x, const bigint y)
 {
 	bigint z;
-	long long int rest = 0;
+	int rest = 0;
 	for(int i = 0; i < L; i++)
 	{
 		z.d[i] = rest + x.d[i] - y.d[i];
@@ -168,25 +135,55 @@ bigint operator*(const bigint x, const bigint y)
 	long long int rest = 0;
 	for(int i = 0; i < L; i++)
 	{
-		z.d[i] = rest;
+		long long int inter = rest;
 		for(int j = 0; j <= i; j++)
 		{
-			z.d[i] += x.d[j] * y.d[i-j];
+			inter += (long long int)x.d[j] * (long long int)y.d[i-j];
 		}
-		rest = z.d[i] / MOD;
-		z.d[i] = z.d[i] % MOD;
+		rest = inter / (long long int)MOD;
+		z.d[i] = inter % (long long int)MOD;
 	}
 	return z;
 }
 
-void div10(bigint* x)
+void div2(bigint* x)
 {
 	for(int i = 0; i < L; i++)
 	{
-		int r = x->d[i] % 10;
-		if(i > 0) x->d[i-1] += r*10000000;
-		x->d[i] /= 10;
+		int r = x->d[i] & 1;
+		if(i > 0 && (x->d[i] & 1)) x->d[i-1] |= MOD2;
+		x->d[i] >>= 1;
 	}
+}
+
+bigint div2(bigint x)
+{
+	for(int i = 0; i < L; i++)
+	{
+		int r = x.d[i] & 1;
+		if(i > 0 && (x.d[i] & 1)) x.d[i-1] |= MOD2;
+		x.d[i] >>= 1;
+	}
+	return x;
+}
+
+bigint decale(const bigint x, int t)
+{
+	int a = t/27;
+	int b = t%27;
+	bigint y = zero;
+	for(int i = a; i < L; i++)
+	{
+		y.d[i] = x.d[i-a];
+	}
+	for(int i = L-1; i >= 0; i--)
+	{
+		int s = y.d[i] >> (27-b); // Part to report to previous
+		y.d[i] -= (s << (27-b));
+		y.d[i] <<= b;
+		if(i < L-1) y.d[i+1] += s;
+	}
+	return y;
 }
 
 bigint operator/(const bigint x, const bigint y)
@@ -198,16 +195,24 @@ bigint operator/(const bigint x, const bigint y)
 		return x;
 	}
 	int t = size(x) - size(y);
-	bigint start = power10[t] * y;
+	bigint start = decale(y, t);
+	int i = t/27;
+	int j = t%27;
 	while(t >= 0)
 	{
-		while(start <= r)
+		if(start <= r)
 		{
 			r = r-start;
-			q = q+power10[t];
+			q.d[i] |= (1 << j);
 		}
 		t--;
-		div10(&start);
+		j--;
+		if(j < 0)
+		{
+			j = 26;
+			i--;
+		}
+		div2(&start);
 	}
 	return q;
 }
@@ -221,18 +226,110 @@ bigint operator%(const bigint x, const bigint y)
 		return x;
 	}
 	int t = size(x) - size(y);
-	bigint start = power10[t] * y;
+	bigint start = decale(y, t);
+	int i = t/27;
+	int j = t%27;
 	while(t >= 0)
 	{
-		while(start <= r)
+		if(start <= r)
 		{
 			r = r-start;
-			q = q+power10[t];
+			q.d[i] |= (1 << j);
 		}
 		t--;
-		div10(&start);
+		j--;
+		if(j < 0)
+		{
+			j = 26;
+			i--;
+		}
+		div2(&start);
 	}
 	return r;
+}
+
+void read(bigint* x){
+	string s;
+	*x = zero;
+	cin >> s;
+	int where = 0;
+	for(int i = 0; i < s.size(); i++){
+		*x = (*x)*ten;
+		bigint digit = zero;
+		digit.d[0] = s[i] - '0';
+		*x = (*x) + digit;
+	}
+}
+
+void write(const bigint x){
+	/* Write in base 2 :
+	bool zero = false;
+	for(int i = L-1; i >= 0; i--)
+	{
+		for(int j = 26; j >= 0; j--)
+		{
+			int s = 0;
+			if(x.d[i] & (1 << j)) s = 1;
+			if(zero) printf("%d", s);
+			else if(s != 0 || (i == 0 && j == 0))
+			{
+				printf("%d", s);
+				zero = true;
+			}
+		}
+	}
+	*/
+	
+	int D[8];
+	for(int i = 0; i < 8; i++) D[i] = 0;
+	
+	for(int i = L-1; i >= 0; i--)
+	{
+		for(int j = 26; j >= 0; j--)
+		{
+			// Faire *2
+			int report = 0;
+			for(int k = 0; k < 8; k++)
+			{
+				D[k] = 2*D[k] + report;
+				report = 0;
+				while(D[k] >= 100000000)
+				{
+					D[k] -= 100000000;
+					report++;
+				}
+			}
+			
+			if(x.d[i] & (1 << j))
+			{
+				// Faire +1
+				bool cont = true;
+				for(int k = 0; k < 8 && cont; k++)
+				{
+					D[k] = D[k] + 1;
+					if(D[k] == 100000000) D[k] = 0;
+					else cont = false;
+				}
+			}
+		}
+	}
+	
+	bool leadingzeros = false;
+	
+	for(int i = 7; i >= 0; i--)
+	{
+		if(leadingzeros) printf("%08d", D[i]);
+		else if(D[i] != 0 || i == 0)
+		{
+			printf("%d", D[i]);
+			leadingzeros = true;
+		}
+	}
+}
+
+void writeln(const bigint x){
+	write(x);
+	printf("\n");
 }
 
 bool even(const bigint x){
@@ -243,7 +340,7 @@ bool even(const bigint x){
 bigint power(bigint x, bigint n){
 	if(n == zero) return one;
 	if(n == one) return x;
-	bigint y = power(x, n/two);
+	bigint y = power(x, div2(n));
 	if(even(n)) return y*y;
 	else return (y*y)*x;
 }
@@ -251,7 +348,7 @@ bigint power(bigint x, bigint n){
 bigint powermod(bigint x, bigint n, bigint mod){
 	if(n == zero) return one;
 	if(n == one) return x;
-	bigint y = powermod(x, n/two, mod);
+	bigint y = powermod(x, div2(n), mod);
 	if(even(n)) return (y*y)%mod;
 	else return (((y*y)%mod)*x)%mod;
 }
@@ -262,13 +359,8 @@ void initialize(){
 	one.d[0] = 1;
 	two = zero;
 	two.d[0] = 2;
-	for(int i = 0; i < L; i++){
-		int p = 1;
-		for(int j = 0; j < 8; j++){			power10[8*i+j] = zero;
-			power10[8*i+j].d[i] = p;
-			p *= 10;
-		}
-	}
+	ten = zero;
+	ten.d[0] = 10;
 }
 
 
@@ -304,7 +396,7 @@ bool miller_rabin(bigint N){
 	int s = 0;
 	bigint t = N-one;
 	while (even(t)){
-		t = t/two;
+		div2(&t);
 		s++;
 	}
 	if (print){
@@ -351,12 +443,14 @@ pair<bigint, bigint> pollard_rho(bigint N, bigint param){
     bigint temp = zero;
     bigint y = two;
     bigint d = one;
+    int e = 0;
     while (d == one){
         x = (power(x, two) + param) % N;
         temp = (power(y, two) + param) % N;
         y = (power(temp, two) + param) % N;
         if (x > y) d = gcd(x-y, N);
         else d = gcd(y-x, N);
+        e++;
     }
     if (d == N) return pollard_rho(N, param + one);
     return make_pair(d, N/d);
@@ -366,7 +460,7 @@ vector<bigint> factorize(bigint N){
 	vector<bigint> factors;
 	vector<bigint> tofactor;
 	while (even(N)){
-		N = N/two;
+		div2(&N);
 		factors.push_back(two);
 	}
 	if (print){
@@ -405,6 +499,7 @@ int main(int argc, char *argv[]){
 
 	bigint x;
 	read(&x);
+	
 	while (!(x==zero)){
 		//clock_t start = clock();
 		vector<bigint> v = factorize(x);
