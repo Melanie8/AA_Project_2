@@ -2,16 +2,19 @@ from sys import stdin, exit
 from datetime import datetime
 import random
 import math
+import numpy as np
 
 print_debug = False
-print_time = True
-
+print_time = False
+first_factorisations_mode = True
+max_dec = 1
+first_fact = ()
 
 def elapsed_time_function(function_name, time0):
     time1 = datetime.now()
     elapsed_time = time1 - time0
     s = 'Elapsed time %s: %d seconds and %d milliseconds' % (function_name, elapsed_time.seconds, elapsed_time.microseconds/1000)
-    if print_debug:
+    if print_time:
         print(s)
     return [elapsed_time.seconds, elapsed_time.microseconds/1000]
 
@@ -123,37 +126,48 @@ def pollard_rho(N, param):
     return d, N/d
 
 
-def brent(n):
+def brent(n, c):
     if n % 2 == 0:
-        return 2
-    x, c, m = random.randrange(0, n), random.randrange(1, n), random.randrange(1, n)
-    y, r, q = x,1, 1
-    g, ys = 0, 0
-    while(True):
+        return 2, n/2
+    #x, c, m = random.randrange(0, n), random.randrange(1, n), random.randrange(1, n)
+    m = 100
+    x = 2
+    y = x
+    r = 1
+    q = 1
+    g = 0
+    ys = 0
+    while True:
         x = y
+        k = 0
         for i in range(r):
-            y, k = (y*y+c)%n, 0
-        while(True):
-            ys=y
-            for i in range(min(m,r-k)):
-                y, q = (y*y+c)%n, q*abs(x-y) % n
-            g, k = gcd(q,n), k+m
-            if k>= r or g>1:
+            y = (y*y+c) % n
+        while True:
+            ys = y
+            for i in range(min(m, r-k)):
+                q = q*abs(x-y) % n
+                y = (y*y+c) % n
+            g = gcd(q, n)
+            k += m
+            if k >= r or g > 1:
                 break
         r *= 2
         if g > 1:
             break
     if g == n:
-        while(True):
-            ys, g = (x*x+c)%n, gcd(abs(x-ys),n)
+        while True:
+            g = gcd(abs(x-ys),n)
+            ys = (ys*ys+c) % n
             if g > 1:
                 break
+        if g == n:
+            return brent(n, c+1)
     return g, n/g
 
 
 def fermat1(N):
     i = 1
-    while(i <= 3):
+    while i <= 3:
         x = math.ceil(math.sqrt(i*N))
         j = x*x % N
         r = 0
@@ -166,9 +180,8 @@ def fermat1(N):
             if math.ceil(sqrtj) == sqrtj:
                 x = gcd(N, x-sqrtj)
                 return (x, N/x)
-        i +=1
-    return (-1, -1)
-
+        i += 1
+    return -1, -1
 
 
 def fermat2(N):
@@ -176,7 +189,8 @@ def fermat2(N):
         b = math.sqrt(a*a-N)
         if math.floor(b) == b:
             b = int(b)
-            return (a-b, N/(a-b))
+            return a-b, N/(a-b)
+
 
 def fermat3(N):
     a = int(math.ceil(math.sqrt(N)))
@@ -186,8 +200,98 @@ def fermat3(N):
         b += 2*a+1
         a += 1
         sqrtb = math.sqrt(b)
-    return (a-int(sqrtb), a+int(sqrtb))
+    return a-int(sqrtb), a+int(sqrtb)
 
+
+def decompose(b, baseSize, base):
+    dec = np.zeros(baseSize, dtype=np.int)
+    dec_parity = np.zeros(baseSize, dtype=np.int)
+    i = 0
+    for f in base:
+        while b % f == 0:
+            dec[i] += 1
+            b /= f
+        dec_parity[i] = dec[i] & 1
+        i += 1
+    if b > 1:
+        return None, None
+    else:
+        return dec, dec_parity
+
+
+def gauss_jordan(A, baseSize):
+    comb = [[] for i in range(baseSize+1)]
+    index = [i for i in range(baseSize+1)]
+    r = -1
+    for j in range(baseSize):
+        print "A = "
+        print A
+        print "comb = "
+        print comb
+        # Find pivot
+        for k in range(r+1, baseSize+1):
+            if A[k, j] == 1:
+                break
+        print("pivot in position (%d, %d)" % (k, j))
+        # Subtract
+        if A[k, j] != 0:
+             r += 1
+             if k != r:
+                 print "switch"
+                 temp = A[k, :]
+                 A[k, :] = A[r, :]
+                 A[r, :] = temp
+                 temp = index[k]
+                 index[k] = index[r]
+                 index[r] = temp
+             for i in range(baseSize+1):
+                 print "subtract"
+                 if i != r:
+                     for l in range(baseSize):
+                         if A[i, l] != 0:
+                            comb[index[i]].append(index[k])
+                            print("comb[%d].append(%d)" % (index[i], index[k]))
+                            A[i, l] = (A[i, l] - A[r, l]*A[i, l]) & 1
+    print A
+    print comb
+    print index[baseSize]
+    print comb[index[baseSize]]
+    comb[index[baseSize]].append(index[baseSize])
+    print comb[index[baseSize]]
+    return comb[index[baseSize]]
+
+def quadratic_sieve(N):
+     base = [2, 7, 13]
+     baseSize = 3
+     dec = np.zeros((baseSize+1, baseSize), dtype=np.int)
+     dec_parity = np.zeros((baseSize+1, baseSize), dtype=np.int)
+     a = int(math.ceil(math.sqrt(N)))
+     b = a*a-N
+     counter = 0
+     while counter <= baseSize:
+         print a - 42
+         d, d_parity = decompose(b, baseSize, base)
+         if d is not None:
+             print d
+             if not np.any(d_parity % 2):
+                 g = gcd(a+int(math.sqrt(b)), N)
+                 return g, N/g
+             dec[counter] = d
+             dec_parity[counter] = d_parity
+             counter += 1
+         a += 1
+         b = a*a-N
+     # Find even combination
+     comb = gauss_jordan(dec_parity, baseSize)
+     d = np.zeros(baseSize, dtype=np.int)
+     for x in comb:
+         d[:] += dec[x,:]
+     g = 1
+     i = 0
+     for b in base:
+         g *= math.pow(b, d[i]/2)
+         i += 1
+     return g, N/g
 
 def factorize(N):
     if print_debug:
@@ -209,21 +313,28 @@ def factorize(N):
         while(tofactor):
             newtofactor = []
             for f in tofactor:
-                p0, p1 = brent(f)
-                if miller_rabin(p0):
-                    factors.append(p0)
+                if not(first_factorisations_mode) and f <= max_dec:
+                    for g in first_fact[f]:
+                        factors.append(g)
                 else:
-                    newtofactor.append(p0)
-                if miller_rabin(p1):
-                    factors.append(p1)
-                else:
-                    newtofactor.append(p1)
+                    p0, p1 = brent(f, 1)
+                    if miller_rabin(p0):
+                        factors.append(p0)
+                    else:
+                        newtofactor.append(p0)
+                    if miller_rabin(p1):
+                        factors.append(p1)
+                    else:
+                        newtofactor.append(p1)
             tofactor = newtofactor
+    if first_factorisations_mode:
+        return factors
     factors.sort()
     return factors
 
 
 def main():
+    time0 = datetime.now()
     userinput = int(stdin.readline())
     while userinput!=0:
          if print_debug:
@@ -235,18 +346,47 @@ def main():
              exp = 0
              it = 1
              for f in v:
-                 if (f==current):
+                 if f == current:
                      exp += 1
                  else:
-                     print ('%d^%d' % (current, exp)),
+                     print('%d^%d' % (current, exp)),
                      current = f
                      exp = 1
                  if it == s:
-                     print ('%d^%d' % (current, exp))
+                     print('%d^%d' % (current, exp))
                  it += 1
          userinput = int(stdin.readline())
+    elapsed_time_function("main", time0)
     return 0
 
+
+def first_factorisations():
+    file = open("first_factorisations.txt", "w")
+    file.write("first_fact = ([], [], [2], ")
+    for i in range(3, max_dec+1):
+        file.write("[")
+        v = factorize(i)
+        for j in range(len(v)):
+            if j == 0:
+                file.write("%d" % v[j])
+            else:
+                file.write(", %d" % v[j])
+        if i == max_dec:
+            file.write("])")
+        else:
+            file.write("], ")
+    file.close()
+
 if __name__ == "__main__":
-    a,b = fermat3(561)
-    exit(main())
+    #x = 834
+    # 836 -> 0.26
+    # 834 -> 0.25
+    # 835 -> 0.32
+    #random.seed(x)
+    #if first_factorisations_mode:
+    #    first_factorisations()
+    #else:
+    #exit(main())
+    a, b = quadratic_sieve(1817)
+    print a
+    print b
