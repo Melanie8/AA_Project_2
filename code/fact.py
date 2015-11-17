@@ -1,7 +1,7 @@
-__author__ = 'melaniesedda'
 from sys import stdin, exit
-from datetime import datetime, timedelta
+from datetime import datetime
 import random
+import math
 
 print_debug = False
 print_time = True
@@ -123,6 +123,72 @@ def pollard_rho(N, param):
     return d, N/d
 
 
+def brent(n):
+    if n % 2 == 0:
+        return 2
+    x, c, m = random.randrange(0, n), random.randrange(1, n), random.randrange(1, n)
+    y, r, q = x,1, 1
+    g, ys = 0, 0
+    while(True):
+        x = y
+        for i in range(r):
+            y, k = (y*y+c)%n, 0
+        while(True):
+            ys=y
+            for i in range(min(m,r-k)):
+                y, q = (y*y+c)%n, q*abs(x-y) % n
+            g, k = gcd(q,n), k+m
+            if k>= r or g>1:
+                break
+        r *= 2
+        if g > 1:
+            break
+    if g == n:
+        while(True):
+            ys, g = (x*x+c)%n, gcd(abs(x-ys),n)
+            if g > 1:
+                break
+    return g, n/g
+
+
+def fermat1(N):
+    i = 1
+    while(i <= 3):
+        x = math.ceil(math.sqrt(i*N))
+        j = x*x % N
+        r = 0
+        sqrtj = math.sqrt(j)
+        while r <= 2 or math.ceil(sqrtj) == sqrtj:
+            x += 1
+            j = x*x % N
+            sqrtj = math.sqrt(j)
+            r += 1
+            if math.ceil(sqrtj) == sqrtj:
+                x = gcd(N, x-sqrtj)
+                return (x, N/x)
+        i +=1
+    return (-1, -1)
+
+
+
+def fermat2(N):
+    for a in range(int(math.ceil(math.sqrt(N))), (N+9)/6):
+        b = math.sqrt(a*a-N)
+        if math.floor(b) == b:
+            b = int(b)
+            return (a-b, N/(a-b))
+
+def fermat3(N):
+    a = int(math.ceil(math.sqrt(N)))
+    b = a*a-N
+    sqrtb = math.sqrt(b)
+    while math.ceil(sqrtb) != sqrtb:
+        b += 2*a+1
+        a += 1
+        sqrtb = math.sqrt(b)
+    return (a-int(sqrtb), a+int(sqrtb))
+
+
 def factorize(N):
     if print_debug:
         print("Factorize")
@@ -143,7 +209,7 @@ def factorize(N):
         while(tofactor):
             newtofactor = []
             for f in tofactor:
-                p0, p1 = pollard_rho(f, 1)
+                p0, p1 = brent(f)
                 if miller_rabin(p0):
                     factors.append(p0)
                 else:
@@ -155,6 +221,7 @@ def factorize(N):
             tofactor = newtofactor
     factors.sort()
     return factors
+
 
 def main():
     userinput = int(stdin.readline())
@@ -181,4 +248,5 @@ def main():
     return 0
 
 if __name__ == "__main__":
+    a,b = fermat3(561)
     exit(main())
