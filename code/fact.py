@@ -266,9 +266,13 @@ def gauss_jordan(A, baseSize):
                              A[i, l] = (A[i, l] - A[r, l]) & 1
                              if print_debug:
                                  print("entry (%d, %d) becomes %d" %(i, l, A[i, l] - A[r, j]))
-                         '''if not np.any(A[i, :] % 2):
-                             comb[index[i]].append(index[i])
-                             return comb[index[i]]'''
+                         if not np.any(A[i, :] % 2):
+                             if print_debug:
+                                 print "zero line found"
+                                 print i
+                                 print comb
+                                 print comb[index[i]]
+                             return comb[index[i]]
     if print_debug:
         print("A =")
         print A
@@ -276,6 +280,8 @@ def gauss_jordan(A, baseSize):
         print comb
         print ("index =")
         print index
+        print ("returned combination = ")
+        print comb[baseSize]
     return comb[baseSize]
 
 def quadratic_sieve(N):
@@ -284,16 +290,20 @@ def quadratic_sieve(N):
      dec = np.zeros((baseSize+1, baseSize), dtype=np.int)
      dec_parity = np.zeros((baseSize+1, baseSize), dtype=np.int)
      a = int(math.ceil(math.sqrt(N)))
+     a_saved = []
      b = a*a-N
      counter = 0
      while counter <= baseSize:
-         print a - 42
+         if print_debug:
+             print a - 42
          d, d_parity = decompose(b, baseSize, base)
          if d is not None:
-             print d
+             if print_debug:
+                print d
              if not np.any(d_parity % 2):
-                 g = gcd(a+int(math.sqrt(b)), N)
+                 g = gcd(a-int(math.sqrt(b)), N)
                  return g, N/g
+             a_saved.append(a)
              dec[counter] = d
              dec_parity[counter] = d_parity
              counter += 1
@@ -302,14 +312,19 @@ def quadratic_sieve(N):
      # Find even combination
      comb = gauss_jordan(dec_parity, baseSize)
      d = np.zeros(baseSize, dtype=np.int)
-     for x in comb:
-         d[:] += dec[x,:]
      a = 1
-     i = 0
-     for b in base:
-         a *= math.pow(b, d[i]/2)
-         i += 1
-     g = gcd(a-N, N)
+     b = 1
+     for x in comb:
+         if print_debug:
+            print dec[x, :]
+            print a, b
+         a *= a_saved[x]
+         for i in range(baseSize):
+             if dec[x, i] != 0:
+                b *= math.pow(base[i], dec[x, i])
+     if print_debug:
+         print a, int(math.sqrt(b))
+     g = gcd(a-int(math.sqrt(b)), N)
      return g, N/g
 
 def factorize(N):
@@ -410,20 +425,3 @@ if __name__ == "__main__":
     a, b = quadratic_sieve(N)
     print a
     print b
-
-    baseSize = 4
-    base = [2, 3, 5, 7]
-    dec = np.array([[1, 1, 2, 2], [3, 0, 1, 2], [5, 2, 0, 0], [0, 0, 1, 0], [1, 1, 1, 1]])
-    dec_parity = np.array([[1, 1, 0, 0], [1, 0, 1, 0], [1, 0, 0, 0], [0, 0, 1, 0], [1, 1, 1, 1]])
-    comb = gauss_jordan(dec_parity, baseSize)
-    print comb
-    d = np.zeros(baseSize, dtype=np.int)
-    for x in comb:
-     d[:] += dec[x,:]
-    a = 1
-    i = 0
-    for b in base:
-     a *= math.pow(b, d[i]/2)
-     i += 1
-    g = gcd(a-N, N)
-    print g, N/g
