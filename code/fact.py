@@ -3,8 +3,9 @@ from datetime import datetime
 import random
 import math
 import numpy as np
+from sets import Set
 
-print_debug = False
+print_debug = True
 print_time = False
 first_factorisations_mode = True
 max_dec = 1
@@ -220,45 +221,62 @@ def decompose(b, baseSize, base):
 
 
 def gauss_jordan(A, baseSize):
-    comb = [[] for i in range(baseSize+1)]
+    comb = [[i] for i in range(baseSize+1)]
     index = [i for i in range(baseSize+1)]
     r = -1
     for j in range(baseSize):
-        print "A = "
-        print A
-        print "comb = "
-        print comb
+        if print_debug:
+            print("A =")
+            print A
+            print("comb =")
+            print comb
         # Find pivot
         for k in range(r+1, baseSize+1):
             if A[k, j] == 1:
                 break
-        print("pivot in position (%d, %d)" % (k, j))
+        if print_debug:
+            print("The pivot is in position (%d, %d)" % (k, j))
         # Subtract
         if A[k, j] != 0:
              r += 1
              if k != r:
-                 print "switch"
-                 temp = A[k, :]
-                 A[k, :] = A[r, :]
-                 A[r, :] = temp
+                 if print_debug:
+                     print("k = %d, r = %d" % (k, r))
+                 temp = A[r, :]
+                 if print_debug:
+                     print A[r, :]
+                 A[r, :] = A[k, :]
+                 if print_debug:
+                     print A[r, :]
+                 A[k, :] = temp
+                 if print_debug:
+                     print A[k, :]
                  temp = index[k]
                  index[k] = index[r]
                  index[r] = temp
+                 if print_debug:
+                    print("A =")
+                    print A
              for i in range(baseSize+1):
-                 print "subtract"
                  if i != r:
-                     for l in range(baseSize):
-                         if A[i, l] != 0:
-                            comb[index[i]].append(index[k])
-                            print("comb[%d].append(%d)" % (index[i], index[k]))
-                            A[i, l] = (A[i, l] - A[r, l]*A[i, l]) & 1
-    print A
-    print comb
-    print index[baseSize]
-    print comb[index[baseSize]]
-    comb[index[baseSize]].append(index[baseSize])
-    print comb[index[baseSize]]
-    return comb[index[baseSize]]
+                     if A[i, j] != 0:
+                         for c in comb[index[r]]:
+                            comb[index[i]].append(c)
+                         for l in range(baseSize):
+                             A[i, l] = (A[i, l] - A[r, l]) & 1
+                             if print_debug:
+                                 print("entry (%d, %d) becomes %d" %(i, l, A[i, l] - A[r, j]))
+                         '''if not np.any(A[i, :] % 2):
+                             comb[index[i]].append(index[i])
+                             return comb[index[i]]'''
+    if print_debug:
+        print("A =")
+        print A
+        print("comb =")
+        print comb
+        print ("index =")
+        print index
+    return comb[baseSize]
 
 def quadratic_sieve(N):
      base = [2, 7, 13]
@@ -286,11 +304,12 @@ def quadratic_sieve(N):
      d = np.zeros(baseSize, dtype=np.int)
      for x in comb:
          d[:] += dec[x,:]
-     g = 1
+     a = 1
      i = 0
      for b in base:
-         g *= math.pow(b, d[i]/2)
+         a *= math.pow(b, d[i]/2)
          i += 1
+     g = gcd(a-N, N)
      return g, N/g
 
 def factorize(N):
@@ -387,6 +406,24 @@ if __name__ == "__main__":
     #    first_factorisations()
     #else:
     #exit(main())
-    a, b = quadratic_sieve(1817)
+    N = 1817
+    a, b = quadratic_sieve(N)
     print a
     print b
+
+    baseSize = 4
+    base = [2, 3, 5, 7]
+    dec = np.array([[1, 1, 2, 2], [3, 0, 1, 2], [5, 2, 0, 0], [0, 0, 1, 0], [1, 1, 1, 1]])
+    dec_parity = np.array([[1, 1, 0, 0], [1, 0, 1, 0], [1, 0, 0, 0], [0, 0, 1, 0], [1, 1, 1, 1]])
+    comb = gauss_jordan(dec_parity, baseSize)
+    print comb
+    d = np.zeros(baseSize, dtype=np.int)
+    for x in comb:
+     d[:] += dec[x,:]
+    a = 1
+    i = 0
+    for b in base:
+     a *= math.pow(b, d[i]/2)
+     i += 1
+    g = gcd(a-N, N)
+    print g, N/g
