@@ -5,7 +5,7 @@ import math
 import numpy as np
 import copy
 
-print_debug = True
+print_debug = False
 print_time = True
 first_factorisations_mode = True
 max_prime = 4000
@@ -286,6 +286,17 @@ def tonelli_shanks(n, p):
         c = b*b % p
         M = i
 
+def square_roots_nul(n, p, q):
+    S = tonelli_shanks(n, p)
+    R = []
+    n = n % q
+    for s in S:
+        r = s
+        while r < q:
+            if (r*r)%q == n:
+                R.append(r)
+            r += p
+    return R
 
 def decompose(b, baseSize, base):
     dec = np.zeros(baseSize, dtype=np.long)
@@ -294,6 +305,7 @@ def decompose(b, baseSize, base):
     for f in base:
         if f == -1:
             if b < 0:
+                b = -b
                 dec[i] = 1
                 dec_parity |= 1 << (baseSize-1-i)
         else:
@@ -311,14 +323,7 @@ def decompose(b, baseSize, base):
 def gauss_jordan_bitwise(L, nSmooth, baseSize):
     if print_debug:
         print("nSmooth = %d, baseSize = %d" % (nSmooth, baseSize))
-        for i in range(nSmooth):
-            if print_debug:
-                print "{0:b}".format(L[i])
     C = [1 << nSmooth-1-i for i in range(nSmooth)]
-    if print_debug:
-        for i in range(nSmooth):
-            if print_debug:
-                print "{0:b}".format(C[i])
     indice = [i for i in range(nSmooth)]
     for c in range(baseSize):
         if print_debug:
@@ -429,113 +434,181 @@ def quadratic_sieve(N):
      if print_debug:
          print "base = ",
          print base
-     # Find baseSize+1 smooth numbers in the interval  [sqrt(n)-M, sqrt(n)+M] with M = B^3
+
+     # Find >baseSize smooth numbers in the interval  [sqrt(n)-M, sqrt(n)+M] with M = B^3
      M = int(power(B, 3))
      X = max(1, int(math.ceil(math.sqrt(N)-M)))
-     smooth = []
-     nSmooth = 0
-     T = np.zeros(2*M, dtype=np.long)
-     for i in range(2*M):
-         T[i] = abs((X+i)*(X+i)-N)
-         if T[i] == 1:
-             smooth.append(X+i)
-             nSmooth += 1
-         if T[i] == 0:
-             return X+i, X+i
-     if print_debug:
-         print "T = ",
-         print T
-     for p in range(1, baseSize):
-         R = tonelli_shanks(N, base[p])
+
+
+     #method = 1
+     #method = 2
+     method = 2 # do both
+
+     if method != 1:
+         T = np.zeros(2*M, dtype=np.long)
+         smooth = []
+         TT = []
+         nSmooth = 0
+         log_base = [math.floor(math.log(base[i])) for i in range(1, baseSize)]
+         for p in range(1, baseSize):
+             q = base[p]
+             while q <= 100000: # Now also do the powers of p
+                 if q == base[p]:
+                     R = tonelli_shanks(N, q)
+                 else:
+                     R = square_roots_nul(N, base[p], q) # If q = p^j with j >= 2, our technique for finding the square roots is a bit silly
+                     if len(R) == 0: # If there are not square roots mod q = p^j then there will be no square roots mod p^(j+1)
+                         break
+                 print("q = %d" % q)
+                 if print_debug:
+                     print("q = %d, R = " % q),
+                     print R
+                 m = X % q
+                 for r in R:
+                     if r-m >= 0:
+                         i = r-m
+                     else:
+                         i = r-m+q
+                     i = int(i)
+                     while i < 2*M:
+                         T[i] += log_base[p-1]
+                         i += q
+                 q *= base[p]
+         #target = math.log(N)/2+math.log(M)
+         #thresh = 3/4*target
+         E = [math.exp(i) for i in range(1, int(math.floor(math.log(M))) + 2)] # Compute e^1, e^2, e^3, ...
+         target2 = [math.log(N)/2+i+1 for i in range(1, int(math.floor(math.log(M))) + 2)] # Compute the different targets (will depend on i)
+         thresh = 75
+         current = 0
+         # Guys >= sqrt(n)
+         for j in range(0,M):
+             if E[current+1] <= j:
+                 current = current+1
+             i = M+j
+             T[i] = T[i]*100/target2[current]
+             if T[i] >= thresh:
+                 smooth.append(X+i)
+                 TT.append(i)
+                 nSmooth += 1
+         current = 0
+         # Guys < sqrt(n)
+         for j in range(1,M):
+             if E[current+1] <= j:
+                 current = current+1
+             i = M-j
+             T[i] = T[i]*100/target2[current]
+             if T[i] >= thresh:
+                 smooth.append(X+i)
+                 TT.append(i)
+                 nSmooth += 1
+
+     if method == 3:
+         T2 = T
+
+     if method != 2:
+         T = np.zeros(2*M, dtype=np.long)
+         #smooth = []
+         #nSmooth = 0
+         for i in range(2*M):
+             T[i] = abs((X+i)*(X+i)-N)
+             #if T[i] == 1:
+             #    smooth.append(X+i)
+             #    nSmooth += 1
+             #    if print_debug:
+             #        print("!!!! T2[%d] = %d, target = %d" % (i, T2[i], target))
+             if T[i] == 0:
+                 return X+i, X+i
          if print_debug:
-             print("p = %d, R = " % base[p]),
-             print R
-         m = X % base[p]
-         for r in R:
-             if r-m >= 0:
-                 i = r-m
-             else:
-                 i = r-m+base[p]
-             i = int(i)
-             while i < 2*M:
-                 if T[i] % base[p] != 0:
-                     print("WTF!!! p = %d, r = %d, i = %d, T[i] = %d" % (base[p], r, i, T[i]))
-                 T[i] /= base[p]
-                 while T[i] % base[p] == 0:
+             print "T = ",
+             print T
+         for p in range(1, baseSize):
+             R = tonelli_shanks(N, base[p])
+             print("p = %d" % base[p])
+             if print_debug:
+                 print("p = %d, R = " % base[p]),
+                 print R
+             m = X % base[p]
+             for r in R:
+                 if r-m >= 0:
+                     i = r-m
+                 else:
+                     i = r-m+base[p]
+                 i = int(i)
+                 while i < 2*M:
+                     if T[i] % base[p] != 0:
+                         print("WTF!!! p = %d, r = %d, i = %d, T[i] = %d" % (base[p], r, i, T[i]))
                      T[i] /= base[p]
-                 if T[i] == 1:
-                     smooth.append(X+i)
-                     nSmooth += 1
-                 i += base[p]
+                     while T[i] % base[p] == 0:
+                         T[i] /= base[p]
+                     #if T[i] == 1:
+                     #    smooth.append(X+i)
+                     #    nSmooth += 1
+                     #    if print_debug and method == 3:
+                     #       print("!!!! T2[%d] = %d, target = %d" % (i, T2[i], target))
+                     i += base[p]
 
-         if nSmooth > p+5:
-             base = base[0:p+1]
-             baseSize = p+1
-             break
-     if print_debug:
-         print "T = ",
-         print T
-         print "smooth = ",
-         print smooth
-         print("baseSize = %d, base = " % baseSize)
-         print base
+     if method == 3:
+         falsesmooth = 0
+         smoothmissed = 0
+         realsmooth = 0
+         for i in range(len(TT)):
+             TT[i] = T[TT[i]]
+         for i in range(2*M):
+             if T[i] == 1 and T2[i] >= 75:
+                 realsmooth += 1
+             elif T[i] == 1:
+                 smoothmissed += 1
+             elif T2[i] >= 75:
+                 falsesmooth += 1          
+         print("REAL SMOOTH : %d", realsmooth)
+         print("FALSE SMOOTH : %d", falsesmooth)
+         print("MISSED SMOOTH : %d", smoothmissed)
+         
+     print("SMOOTHS FOUND BEFORE VERIF : %d, BASE SIZE : %d" % (nSmooth, baseSize))
 
-     if nSmooth <= baseSize:
-         print("Not enough smooth numbers :(")
-
+     # Decompose them in the base
      dec = np.zeros((nSmooth, baseSize), dtype=np.long)
      dec_parity = []
-     #dec_parity = np.zeros(nSmooth, dtype=np.long)
-
      for i in range(nSmooth):
          if print_debug:
             print("smooth[i] = %d" % smooth[i])
          a, b = decompose(smooth[i]*smooth[i]-N, baseSize, base)
-         if print_debug:
-             print a
-             print "{0:b}".format(b)
-         dec[i] = a
-         dec_parity.append(b)
-
-     '''a = int(math.ceil(math.sqrt(N)))
-     a_saved = []
-     b = a*a-N
-     counter = 0
-     while counter <= baseSize:
-         if print_debug:
-             print a
-         d, d_parity = decompose(b, baseSize, base)
-         if d is not None:
+         if a is None:
+             nSmooth -= 1
              if print_debug:
-                print d
-             if not np.any(d_parity % 2):
-                 g = gcd(a-int(math.sqrt(b)), N)
-                 return g, N/g
-             a_saved.append(a)
-             dec[counter] = d
-             dec_parity[counter] = d_parity
-             counter += 1
-         a += 1
-         b = a*a-N'''
+                 print "not a smooth number"
+         else:
+             if TT[i] != 1:
+                 print("Weird : %d" % (smooth[i]*smooth[i]-N)) 
+             if print_debug:
+                 print a
+                 print "{0:b}".format(b)
+             dec[i] = a
+             dec_parity.append(b)
+     print("SMOOTHS FOUND AFTER VERIF : %d" % nSmooth)
+     
+     if nSmooth <= baseSize:
+         print("Not enough smooth numbers :(")
+
      # Find even combination
      combs = gauss_jordan_bitwise(dec_parity, nSmooth, baseSize)
      if print_debug:
          print "combs = ",
          print combs
+
      # Find non trivial factors
      for comb in combs:
          a = 1
          b = 1
          tot = np.zeros(baseSize, dtype=np.int)
+         print "comb = ",
+         print "{0:b}".format(comb)
          if print_debug:
              print "comb = ",
              print "{0:b}".format(comb)
          x = nSmooth-1
          while comb != 0:
              if comb & 1 == 1:
-                 if print_debug:
-                    print "decomposition = ",
-                    print dec[x, :]
                  a = (a*smooth[x])%N
                  for i in range(baseSize):
                      if dec[x, i] != 0:
@@ -547,8 +620,10 @@ def quadratic_sieve(N):
          if print_debug:
              print a, b
          g = gcd(a-b, N)
+         print g, N/g
          if g != 1 and g != N:
              return g, N/g
+     return -1, -1
 
 
 def factorize(N):
@@ -648,7 +723,8 @@ if __name__ == "__main__":
     #exit(main())
     #find_first_primes()
     time0 = datetime.now()
-    N = 138762438070143122474623 #130750493899956009090497 #4153755852461398439 #32193886486049401L #253442228047 #152061056489 #152020131149 #7373 #5535333969127 #3691153417681 #10379
+    N = 138762438070143122474623
+    #138762438070143122474623 #130750493899956009090497 #4153755852461398439 #32193886486049401L #253442228047 #152061056489 #152020131149 #7373 #5535333969127 #3691153417681 #10379
     a, b = quadratic_sieve(N)
     print a
     print b
@@ -657,4 +733,5 @@ if __name__ == "__main__":
     print a
     print b
     print "{0:b}".format(b)'''
+
 
