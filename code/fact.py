@@ -329,22 +329,23 @@ def gauss_jordan_bitwise(L, nSmooth, baseSize):
         if print_debug:
             print("c = %d" % c)
         # Find pivot
+        found = False
         for i in range(c, nSmooth):
             if L[indice[i]] & (1 << (baseSize-c-1)) != 0:
+                found = True
                 break
-        temp = indice[i]
-        indice[i] = indice[c]
-        indice[c] = temp
-        if print_debug:
-            print("The pivot is in position (%d, %d)" % (i, c))
-        # Subtract
-        for j in range(c+1, nSmooth):
-            if L[indice[j]] & (1 << (baseSize-c-1)) != 0:
-                L[indice[j]] ^= L[indice[c]]
-                C[indice[j]] ^= C[indice[c]]
+        if found:
+            temp = indice[i]
+            indice[i] = indice[c]
+            indice[c] = temp
+            if print_debug:
+                print("The pivot is in position (%d, %d)" % (i, c))
+            # Subtract
+            for j in range(c+1, nSmooth):
+                if L[indice[j]] & (1 << (baseSize-c-1)) != 0:
+                    L[indice[j]] ^= L[indice[c]]
+                    C[indice[j]] ^= C[indice[c]]
     return [C[indice[i]] for i in range(nSmooth) if L[indice[i]] == 0]
-
-
 
 def gauss_jordan(A, nSmooth, baseSize):
     comb = [[i] for i in range(nSmooth)]
@@ -447,9 +448,8 @@ def quadratic_sieve(N):
      if method != 1:
          T = np.zeros(2*M, dtype=np.long)
          smooth = []
-         TT = []
          nSmooth = 0
-         log_base = [math.floor(math.log(base[i])) for i in range(1, baseSize)]
+         log_base = [math.ceil(math.log(base[i])) for i in range(1, baseSize)]
          for p in range(1, baseSize):
              q = base[p]
              while q <= 100000: # Now also do the powers of p
@@ -478,17 +478,15 @@ def quadratic_sieve(N):
          #thresh = 3/4*target
          E = [math.exp(i) for i in range(1, int(math.floor(math.log(M))) + 2)] # Compute e^1, e^2, e^3, ...
          target2 = [math.log(N)/2+i+1 for i in range(1, int(math.floor(math.log(M))) + 2)] # Compute the different targets (will depend on i)
-         thresh = 75
+         thresh2 = [3*i/4 for i in target2]
          current = 0
          # Guys >= sqrt(n)
          for j in range(0,M):
              if E[current+1] <= j:
                  current = current+1
              i = M+j
-             T[i] = T[i]*100/target2[current]
-             if T[i] >= thresh:
+             if T[i] >= thresh2[current]:
                  smooth.append(X+i)
-                 TT.append(i)
                  nSmooth += 1
          current = 0
          # Guys < sqrt(n)
@@ -496,10 +494,8 @@ def quadratic_sieve(N):
              if E[current+1] <= j:
                  current = current+1
              i = M-j
-             T[i] = T[i]*100/target2[current]
-             if T[i] >= thresh:
+             if T[i] >= thresh2[current]:
                  smooth.append(X+i)
-                 TT.append(i)
                  nSmooth += 1
 
      if method == 3:
@@ -546,13 +542,12 @@ def quadratic_sieve(N):
                      #    if print_debug and method == 3:
                      #       print("!!!! T2[%d] = %d, target = %d" % (i, T2[i], target))
                      i += base[p]
-
+     
+     '''
      if method == 3:
          falsesmooth = 0
          smoothmissed = 0
          realsmooth = 0
-         for i in range(len(TT)):
-             TT[i] = T[TT[i]]
          for i in range(2*M):
              if T[i] == 1 and T2[i] >= 75:
                  realsmooth += 1
@@ -563,12 +558,14 @@ def quadratic_sieve(N):
          print("REAL SMOOTH : %d", realsmooth)
          print("FALSE SMOOTH : %d", falsesmooth)
          print("MISSED SMOOTH : %d", smoothmissed)
+     '''
          
      print("SMOOTHS FOUND BEFORE VERIF : %d, BASE SIZE : %d" % (nSmooth, baseSize))
 
      # Decompose them in the base
-     dec = np.zeros((nSmooth, baseSize), dtype=np.long)
+     dec = []
      dec_parity = []
+     real_smooth = []
      for i in range(nSmooth):
          if print_debug:
             print("smooth[i] = %d" % smooth[i])
@@ -578,13 +575,12 @@ def quadratic_sieve(N):
              if print_debug:
                  print "not a smooth number"
          else:
-             if TT[i] != 1:
-                 print("Weird : %d" % (smooth[i]*smooth[i]-N)) 
              if print_debug:
                  print a
                  print "{0:b}".format(b)
-             dec[i] = a
+             dec.append(a)
              dec_parity.append(b)
+             real_smooth.append(smooth[i])
      print("SMOOTHS FOUND AFTER VERIF : %d" % nSmooth)
      
      if nSmooth <= baseSize:
@@ -601,26 +597,23 @@ def quadratic_sieve(N):
          a = 1
          b = 1
          tot = np.zeros(baseSize, dtype=np.int)
-         print "comb = ",
-         print "{0:b}".format(comb)
          if print_debug:
              print "comb = ",
              print "{0:b}".format(comb)
          x = nSmooth-1
          while comb != 0:
              if comb & 1 == 1:
-                 a = (a*smooth[x])%N
+                 a = (a*real_smooth[x])%N
                  for i in range(baseSize):
-                     if dec[x, i] != 0:
-                        tot[i] += dec[x, i]
+                     if dec[x][i] != 0:
+                        tot[i] += dec[x][i]
              comb = comb >> 1
              x -= 1
          for i in range(baseSize):
-             b = (b * power(base[i], tot[i]/2)) % N
+             b = (b * powermod(base[i], tot[i]/2, N)) % N
          if print_debug:
              print a, b
-         g = gcd(a-b, N)
-         print g, N/g
+         g = gcd(a+b, N)
          if g != 1 and g != N:
              return g, N/g
      return -1, -1
