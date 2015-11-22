@@ -9,6 +9,9 @@ all: $(EXEC)
 fact: $(OBJ)
 	    @$(CC) -lgmp -o $@ $^
 
+search: $(OBJ)
+	    @$(CC) -lgmp -o $@ $^
+
 %.o: %.c
 	@$(CC) -o $@ -c $< $(CFLAGS)
 
