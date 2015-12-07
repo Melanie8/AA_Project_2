@@ -6,6 +6,7 @@ import math
 print_debug = False
 print_time = False
 
+
 # Print the elapsed time between time0 and now
 def elapsed_time_function(function_name, time0):
     time1 = datetime.now()
@@ -15,6 +16,7 @@ def elapsed_time_function(function_name, time0):
         print(s)
     return [elapsed_time.seconds, elapsed_time.microseconds/1000]
 
+
 # Compute the GCD of a and b
 def gcd(a, b):
     while b != 0:
@@ -22,6 +24,7 @@ def gcd(a, b):
         b = a % b
         a = tmp
     return a
+
 
 # Compute x^n % m efficiently
 def powermod(x, n, m):
@@ -35,6 +38,7 @@ def powermod(x, n, m):
     else:
         return (((y*y)%m)*x)%m
 
+
 # Compute x^n efficiently
 def power(x, n):
     n = int(n)
@@ -47,6 +51,7 @@ def power(x, n):
         return y*y
     else:
         return y*y*x
+
 
 # Miller Rabin test : is N a prime number?
 def miller_rabin(N):
@@ -78,6 +83,7 @@ def miller_rabin(N):
         if not(prob_prime):
             return False
     return True
+
 
 # Pollard Rho algorithm to factorize N
 def pollard_rho(N, param):
@@ -120,6 +126,7 @@ def pollard_rho(N, param):
             return pollard_rho(N, param + 1)
     return d, N/d
 
+
 # Brent version of Pollard Rho algorithm to factorize N
 def brent(N, c):
     if print_debug:
@@ -160,7 +167,6 @@ def brent(N, c):
         if g == N:
             return brent(N, c+1)
     return g, N/g
-
 
 
 # Factorize N

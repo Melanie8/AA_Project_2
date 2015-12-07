@@ -1,5 +1,4 @@
 from sys import stdin, exit
-from math import ceil, floor, sqrt
 from random import randrange
 
 
@@ -18,9 +17,9 @@ def powermod(x, n, m):
         return x
     y = powermod(x, n/2, m)
     if n & 1 == 0:
-        return (y*y)%m
+        return (y*y) % m
     else:
-        return (((y*y)%m)*x)%m
+        return (((y*y) % m) * x) % m
 
 
 def miller_rabin(N):
@@ -35,7 +34,7 @@ def miller_rabin(N):
     while t & 1 == 0:
         t /= 2
         s += 1
-    for i in range(20):
+    for i in range(5):
         prob_prime = False
         a = randrange(1, N)
         u = powermod(a, t, N)
@@ -47,7 +46,7 @@ def miller_rabin(N):
             u = u*u % N
             if u == N-1:
                 prob_prime = True
-        if not(prob_prime):
+        if not prob_prime:
             return False
     return True
 
@@ -96,7 +95,7 @@ def brent(n, c):
         return 2, n/2
     m = 100
     x = 2
-    y = x
+    y = 2
     r = 5
     q = 1
     g = 0
@@ -140,7 +139,7 @@ def factorize(N):
             factors.append(N)
         else:
             tofactor.append(N)
-            while(tofactor):
+            while tofactor:
                 newtofactor = []
                 for f in tofactor:
                     p0, p1 = brent(f, 1)
@@ -160,23 +159,23 @@ def factorize(N):
 def main():
     userinput = int(stdin.readline())
     while userinput!=0:
-         v = factorize(userinput)
-         s = len(v)
-         if s > 0:
-             current = v[0]
-             exp = 0
-             it = 1
-             for f in v:
-                 if f == current:
-                     exp += 1
-                 else:
-                     print('%d^%d' % (current, exp)),
-                     current = f
-                     exp = 1
-                 if it == s:
-                     print('%d^%d' % (current, exp))
-                 it += 1
-         userinput = int(stdin.readline())
+        v = factorize(userinput)
+        s = len(v)
+        if s > 0:
+            current = v[0]
+            exp = 0
+            it = 1
+            for f in v:
+                if f == current:
+                    exp += 1
+                else:
+                    print('%d^%d' % (current, exp)),
+                    current = f
+                    exp = 1
+                if it == s:
+                    print('%d^%d' % (current, exp))
+                it += 1
+        userinput = int(stdin.readline())
     return 0
 
 
