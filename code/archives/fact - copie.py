@@ -3,15 +3,13 @@ from datetime import datetime
 import random
 import math
 import numpy as np
+import copy
 
 print_debug = False
-print_time = True
-first_factorisations_mode = False
-max_prime = 20000
-first_primes = []
-
+print_time = False
+max_prime = 4000
+first_primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997, 1009, 1013, 1019, 1021, 1031, 1033, 1039, 1049, 1051, 1061, 1063, 1069, 1087, 1091, 1093, 1097, 1103, 1109, 1117, 1123, 1129, 1151, 1153, 1163, 1171, 1181, 1187, 1193, 1201, 1213, 1217, 1223, 1229, 1231, 1237, 1249, 1259, 1277, 1279, 1283, 1289, 1291, 1297, 1301, 1303, 1307, 1319, 1321, 1327, 1361, 1367, 1373, 1381, 1399, 1409, 1423, 1427, 1429, 1433, 1439, 1447, 1451, 1453, 1459, 1471, 1481, 1483, 1487, 1489, 1493, 1499, 1511, 1523, 1531, 1543, 1549, 1553, 1559, 1567, 1571, 1579, 1583, 1597, 1601, 1607, 1609, 1613, 1619, 1621, 1627, 1637, 1657, 1663, 1667, 1669, 1693, 1697, 1699, 1709, 1721, 1723, 1733, 1741, 1747, 1753, 1759, 1777, 1783, 1787, 1789, 1801, 1811, 1823, 1831, 1847, 1861, 1867, 1871, 1873, 1877, 1879, 1889, 1901, 1907, 1913, 1931, 1933, 1949, 1951, 1973, 1979, 1987, 1993, 1997, 1999, 2003, 2011, 2017, 2027, 2029, 2039, 2053, 2063, 2069, 2081, 2083, 2087, 2089, 2099, 2111, 2113, 2129, 2131, 2137, 2141, 2143, 2153, 2161, 2179, 2203, 2207, 2213, 2221, 2237, 2239, 2243, 2251, 2267, 2269, 2273, 2281, 2287, 2293, 2297, 2309, 2311, 2333, 2339, 2341, 2347, 2351, 2357, 2371, 2377, 2381, 2383, 2389, 2393, 2399, 2411, 2417, 2423, 2437, 2441, 2447, 2459, 2467, 2473, 2477, 2503, 2521, 2531, 2539, 2543, 2549, 2551, 2557, 2579, 2591, 2593, 2609, 2617, 2621, 2633, 2647, 2657, 2659, 2663, 2671, 2677, 2683, 2687, 2689, 2693, 2699, 2707, 2711, 2713, 2719, 2729, 2731, 2741, 2749, 2753, 2767, 2777, 2789, 2791, 2797, 2801, 2803, 2819, 2833, 2837, 2843, 2851, 2857, 2861, 2879, 2887, 2897, 2903, 2909, 2917, 2927, 2939, 2953, 2957, 2963, 2969, 2971, 2999, 3001, 3011, 3019, 3023, 3037, 3041, 3049, 3061, 3067, 3079, 3083, 3089, 3109, 3119, 3121, 3137, 3163, 3167, 3169, 3181, 3187, 3191, 3203, 3209, 3217, 3221, 3229, 3251, 3253, 3257, 3259, 3271, 3299, 3301, 3307, 3313, 3319, 3323, 3329, 3331, 3343, 3347, 3359, 3361, 3371, 3373, 3389, 3391, 3407, 3413, 3433, 3449, 3457, 3461, 3463, 3467, 3469, 3491, 3499, 3511, 3517, 3527, 3529, 3533, 3539, 3541, 3547, 3557, 3559, 3571, 3581, 3583, 3593, 3607, 3613, 3617, 3623, 3631, 3637, 3643, 3659, 3671, 3673, 3677, 3691, 3697, 3701, 3709, 3719, 3727, 3733, 3739, 3761, 3767, 3769, 3779, 3793, 3797, 3803, 3821, 3823, 3833, 3847, 3851, 3853, 3863, 3877, 3881, 3889, 3907, 3911, 3917, 3919, 3923, 3929, 3931, 3943, 3947, 3967, 3989]
 max_dec = 1
-first_fact = ()
 
 # Print the elapsed time between time0 and now
 def elapsed_time_function(function_name, time0):
@@ -22,6 +20,7 @@ def elapsed_time_function(function_name, time0):
         print(s)
     return [elapsed_time.seconds, elapsed_time.microseconds/1000]
 
+
 # Compute the GCD of a and b
 def gcd(a, b):
     while b != 0:
@@ -29,6 +28,7 @@ def gcd(a, b):
         b = a % b
         a = tmp
     return a
+
 
 # Compute x^n % m efficiently
 def powermod(x, n, m):
@@ -42,6 +42,7 @@ def powermod(x, n, m):
     else:
         return (((y*y)%m)*x)%m
 
+
 # Compute x^n efficiently
 def power(x, n):
     n = int(n)
@@ -54,6 +55,7 @@ def power(x, n):
         return y*y
     else:
         return y*y*x
+
 
 # Miller Rabin test : is N a prime number?
 def miller_rabin(N):
@@ -70,7 +72,7 @@ def miller_rabin(N):
     while t & 1 == 0:
         t /= 2
         s += 1
-    for i in range(5): # 5 tests : Probability of false prime = 1/4^5
+    for i in range(20): # 20 tests : Probability of false prime = 1/4^20
         prob_prime = False
         a = random.randrange(1, N)
         u = powermod(a, t, N)
@@ -86,8 +88,12 @@ def miller_rabin(N):
             return False
     return True
 
+######################################
+#           Pollard Rho              #
+######################################
 # Pollard Rho algorithm to factorize N
 def pollard_rho(N, param):
+    i=1
     if print_debug:
         print("Pollard rho for N = %d" % N)
     x = 2
@@ -98,6 +104,7 @@ def pollard_rho(N, param):
     d = 1
     e = 0
     while d == 1:
+        i+=1
         x = (x*x + param) % N
         temp = (y*y + param) % N
         y = (temp*temp + param) % N
@@ -116,6 +123,7 @@ def pollard_rho(N, param):
         y = saved_y
         d = 1
         while d == 1:
+            i+=1
             x = (x*x + param) % N
             temp = (y*y + param) % N
             y = (temp*temp + param) % N
@@ -125,7 +133,8 @@ def pollard_rho(N, param):
                 d = gcd(y-x, N)
         if d == N:
             return pollard_rho(N, param + 1)
-    return d, N/d
+    return d, N/d,i
+
 
 # Brent version of Pollard Rho algorithm to factorize N
 def brent(N, c):
@@ -136,7 +145,7 @@ def brent(N, c):
     m = 100
     x = 2
     y = x
-    r = 5
+    r = 1
     q = 1
     g = 0
     ys = 0
@@ -168,29 +177,12 @@ def brent(N, c):
             return brent(N, c+1)
     return g, N/g
 
+
+######################################
+#               Fermat               #
+######################################
 # Fermat 1 to factorize N
 def fermat1(N):
-    if print_debug:
-        print("Fermat 1 for N = %d" % N)
-    i = 1
-    while i <= 3:
-        x = math.ceil(math.sqrt(i*N))
-        j = x*x % N
-        r = 0
-        sqrtj = math.sqrt(j)
-        while r <= 2 or math.ceil(sqrtj) == sqrtj:
-            x += 1
-            j = x*x % N
-            sqrtj = math.sqrt(j)
-            r += 1
-            if math.ceil(sqrtj) == sqrtj:
-                x = gcd(N, x-sqrtj)
-                return (x, N/x)
-        i += 1
-    return 1, N
-
-# Fermat 2 to factorize N
-def fermat2(N):
     if print_debug:
         print("Fermat 2 for N = %d" % N)
     for a in range(int(math.ceil(math.sqrt(N))), (N+9)/6):
@@ -199,8 +191,9 @@ def fermat2(N):
             b = int(b)
             return a-b, N/(a-b)
 
-# Fermat 3 to factorize N
-def fermat3(N):
+
+# Fermat 2 to factorize N
+def fermat2(N):
     if print_debug:
         print("Fermat 3 for N = %d" % N)
     a = int(math.ceil(math.sqrt(N)))
@@ -212,19 +205,10 @@ def fermat3(N):
         sqrtb = math.sqrt(b)
     return a-int(sqrtb), a+int(sqrtb)
 
-# Compute the first primes, until max_prime
-def find_first_primes():
-    if print_debug:
-        print "First primes"
-    is_prime = np.ones(max_prime, dtype=bool)
-    for i in range(2, max_prime):
-        if is_prime[i]:
-            first_primes.append(i)
-            j = i*i
-            while j < max_prime:
-                is_prime[j] = False
-                j += i
 
+######################################
+#          Quadratic Sieve           #
+######################################
 # Compute the Legendre symbol (n/p)
 def legendre(n, p):
     if print_debug:
@@ -246,6 +230,7 @@ def legendre(n, p):
     if m % 4 == 3 and p % 4 == 3:
         ans *= (-1)
     return ans*legendre(p, m)
+
 
 # For p prime and n with (n/p) = 1, returns all r such that r^2 = n mod p
 def tonelli_shanks(n, p):
@@ -285,6 +270,7 @@ def tonelli_shanks(n, p):
         c = b*b % p
         M = i
 
+
 # For q = p^k with k >= 2 and n with (n/p) = 1, returns all r such that r^2 = n mod q
 def square_roots_bad(n, p, q):
     if print_debug:
@@ -299,6 +285,7 @@ def square_roots_bad(n, p, q):
                 R.append(r)
             r += p
     return R
+
 
 # Decompose number b with the primes of the base, if this is possible
 def decompose(b, baseSize, base):
@@ -328,6 +315,7 @@ def decompose(b, baseSize, base):
     else:
         return dec, dec_parity
 
+
 # Gauss Jordan algorithm
 def gauss_jordan_bitwise(L, nSmooth, baseSize):
     if print_debug:
@@ -352,6 +340,7 @@ def gauss_jordan_bitwise(L, nSmooth, baseSize):
                     C[indice[j]] ^= C[indice[c]]
     return [C[indice[i]] for i in range(nSmooth) if L[indice[i]] == 0]
 
+
 # Quadratic Sieve algorithm to factorize N
 def quadratic_sieve(N):
      if print_debug:
@@ -364,7 +353,7 @@ def quadratic_sieve(N):
      while baseSize < B:
          l = legendre(N, first_primes[i])
          if l == 0:
-             return first_primes[i], N/first_primes[i]
+             return i, N/i
          if l == 1:
              base.append(first_primes[i])
              baseSize += 1
@@ -400,7 +389,7 @@ def quadratic_sieve(N):
                      T[i] += log
                      i += q
              q *= base[p]
-     
+
      E = [math.exp(i) for i in range(1, int(math.floor(math.log(M))) + 5)] # Compute e^1, e^2, e^3, ...
      target2 = [math.log(N)/2+i+1 for i in range(1, int(math.floor(math.log(M))) + 5)] # Compute the different targets (will depend on i)
      thresh2 = [int(3*i/4) for i in target2]
@@ -428,8 +417,8 @@ def quadratic_sieve(N):
          j += 1
      if print_debug:
          print("Potential smooth numbers found : %d (Base size : %d)" % (nSmooth, baseSize))
-     
-     # Decompose them in the base
+
+     # Decompose in the base
      dec = []
      dec_parity = []
      real_smooth = []
@@ -445,7 +434,7 @@ def quadratic_sieve(N):
              real_smooth.append(smooth[i])
      if print_debug:
          print("Real smooth numbers found : %d" % nSmooth)
-     
+
      if print_debug:
          if nSmooth <= baseSize+1:
              print("Not enough smooth numbers :(")
@@ -477,6 +466,19 @@ def quadratic_sieve(N):
              return g, N/g
      return 1, N
 
+
+def xGCD(a, b):
+    if b == 0:
+       x = 1
+       y = 0
+       return x
+
+    x = xGCD(b, a % b)
+    x = y1
+    y = x1 - (a / b) * y1
+    return x
+
+
 # Factorize N
 def factorize(N):
     if print_debug:
@@ -493,7 +495,9 @@ def factorize(N):
         while(tofactor):
             newtofactor = []
             for f in tofactor:
-                p0, p1 = quadratic_sieve(f)
+                '''p0, p1 = quadratic_sieve(f)
+                if p0==1 or p1==1:'''
+                p0, p1 = brent(f, 1)
                 if miller_rabin(p0):
                     factors.append(p0)
                 else:
@@ -505,6 +509,7 @@ def factorize(N):
             tofactor = newtofactor
     factors.sort()
     return factors
+
 
 def main():
     time0 = datetime.now()
@@ -532,6 +537,7 @@ def main():
     elapsed_time_function("main", time0)
     return 0
 
+
 # Factorize all the small numbers (not used anymore)
 def first_factorisations():
     file = open("first_factorisations.txt", "w")
@@ -551,9 +557,9 @@ def first_factorisations():
     file.close()
 
 if __name__ == "__main__":
-    find_first_primes()
-    exit(main())
-    
+    #exit(main())
+
+    quadratic_sieve(23265811160790642537889302884495500847)
     # Some statistics about quadratic sieve:
     #23265811160790642537889302884495500847 --> 2040 sec (B habituel -> 1015, M = B^3/3 -> ?, SMOOTHS : 300948 -> 4343 / 1015)
     #4458135213943293827010603080147 --> 228 sec (B habituel -> 459, M = B^3/3 -> 32234193, SMOOTHS : 48756 -> 1067 / 459)
